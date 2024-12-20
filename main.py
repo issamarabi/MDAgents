@@ -9,7 +9,8 @@ from prettytable import PrettyTable
 from utils import (
     Agent, Group, parse_hierarchy, parse_group_info, setup_model,
     load_data, create_question, determine_difficulty,
-    process_basic_query, process_intermediate_query, process_advanced_query
+    process_basic_query, process_intermediate_query, process_advanced_query,
+    refine_question_medically
 )
 
 parser = argparse.ArgumentParser()
@@ -22,19 +23,33 @@ args = parser.parse_args()
 model, client = setup_model(args.model)
 test_qa, examplers = load_data(args.dataset)
 
-agent_emoji = ['\U0001F468\u200D\u2695\uFE0F', '\U0001F468\U0001F3FB\u200D\u2695\uFE0F', '\U0001F469\U0001F3FC\u200D\u2695\uFE0F', '\U0001F469\U0001F3FB\u200D\u2695\uFE0F', '\U0001f9d1\u200D\u2695\uFE0F', '\U0001f9d1\U0001f3ff\u200D\u2695\uFE0F', '\U0001f468\U0001f3ff\u200D\u2695\uFE0F', '\U0001f468\U0001f3fd\u200D\u2695\uFE0F', '\U0001f9d1\U0001f3fd\u200D\u2695\uFE0F', '\U0001F468\U0001F3FD\u200D\u2695\uFE0F']
+agent_emoji = [
+    '\U0001F468\u200D\u2695\uFE0F',
+    '\U0001F468\U0001F3FB\u200D\u2695\uFE0F',
+    '\U0001F469\U0001F3FC\u200D\u2695\uFE0F',
+    '\U0001F469\U0001F3FB\u200D\u2695\uFE0F',
+    '\U0001f9d1\u200D\u2695\uFE0F',
+    '\U0001f9d1\U0001f3ff\u200D\u2695\uFE0F',
+    '\U0001f468\U0001f3ff\u200D\u2695\uFE0F',
+    '\U0001f468\U0001f3fd\u200D\u2695\uFE0F',
+    '\U0001f9d1\U0001f3fd\u200D\u2695\uFE0F',
+    '\U0001F468\U0001F3FD\u200D\u2695\uFE0F'
+]
 random.shuffle(agent_emoji)
 
 results = []
 for no, sample in enumerate(tqdm(test_qa)):
     if no == args.num_samples:
         break
-    
+
     print(f"\n[INFO] no: {no}")
-    total_api_calls = 0
 
     question, img_path = create_question(sample, args.dataset)
-    difficulty = determine_difficulty(question, args.difficulty)
+
+    # Expand the initial question medically using GPT-4o
+    question = refine_question_medically(question, args.model)
+
+    difficulty = determine_difficulty(question, args.difficulty, args.model)
 
     print(f"difficulty: {difficulty}")
 
